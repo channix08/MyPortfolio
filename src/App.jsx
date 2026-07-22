@@ -1,326 +1,572 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import heroArtwork from './assets/hero.png'
 import { projects } from './data/projects'
+import { capabilities, experience, profile, stackGroups } from './data/site'
 
-const services = [
-  {
-    number: '01',
-    title: 'Product websites',
-    description: 'Clear, high-converting websites that make complex products feel simple and worth exploring.',
-  },
-  {
-    number: '02',
-    title: 'Frontend systems',
-    description: 'Responsive React interfaces and reusable components that stay tidy as your product grows.',
-  },
-  {
-    number: '03',
-    title: 'Design direction',
-    description: 'A strong visual point of view, from typography and layout to motion and interaction details.',
-  },
-]
-
-const experience = [
-  { period: '2024 — Now', role: 'Senior Frontend Engineer', company: 'Beacon Studio' },
-  { period: '2022 — 2024', role: 'Frontend Product Engineer', company: 'LedgerFlow' },
-  { period: '2020 — 2022', role: 'Independent Designer & Developer', company: 'Freelance' },
-]
-
-const stats = [
-  ['06+', 'Years crafting for the web'],
-  ['26', 'Digital products shipped'],
-  ['09', 'Design systems delivered'],
-]
+const terminalTabs = ['profile.ts', 'stack.json', 'now.md']
 
 function Arrow({ diagonal = false }) {
-  return <span aria-hidden="true">{diagonal ? '↗' : '→'}</span>
+  return <span aria-hidden="true">{diagonal ? 'NE' : '->'}</span>
 }
 
-function ProjectVisual({ project, index }) {
-  if (project.cover) {
-    return <img src={project.cover} alt={`${project.title} project preview`} />
+function ProjectPreview({ project }) {
+  if (project.image) {
+    return <img className="project-image" src={project.image} alt={`${project.title} project preview`} />
   }
 
   return (
-    <div className="project-mockup" style={{ '--project-accent': project.accent }} aria-hidden="true">
-      <div className="mockup-bar">
-        <span />
-        <span />
-        <span />
-        <i />
+    <div className="code-preview" data-tone={project.tone} aria-hidden="true">
+      <div className="preview-sidebar">
+        <span className="sidebar-label">EXPLORER</span>
+        <span className="file-row is-open">v portfolio</span>
+        <span className="file-row is-active"># {project.id}.tsx</span>
+        <span className="file-row"># tokens.css</span>
+        <span className="file-row"># routes.ts</span>
       </div>
-      <div className={`mockup-screen mockup-screen-${(index % 3) + 1}`}>
-        <div className="mockup-kicker" />
-        <div className="mockup-title" />
-        <div className="mockup-title short" />
-        <div className="mockup-button" />
-        <div className="mockup-panel">
-          <span />
-          <span />
-          <span />
+      <div className="preview-editor">
+        <div className="preview-tab">{project.id}.tsx <i /></div>
+        <div className="preview-code">
+          <span><b>01</b><code><i>import</i> {'{'} build {'}'} <i>from</i> <em>'@/system'</em></code></span>
+          <span><b>02</b><code /></span>
+          <span><b>03</b><code><i>const</i> project = {'{'}</code></span>
+          <span><b>04</b><code>  name: <em>'{project.title}'</em>,</code></span>
+          <span><b>05</b><code>  status: <strong>'{project.status.toLowerCase()}'</strong>,</code></span>
+          <span><b>06</b><code>  stack: [<em>'{project.stack[0]}'</em>, <em>'{project.stack[1]}'</em>],</code></span>
+          <span><b>07</b><code>{'}'}</code></span>
+          <span><b>08</b><code /></span>
+          <span><b>09</b><code><i>export default</i> build(project)</code></span>
         </div>
+        <div className="preview-minimap"><span /><span /><span /><span /></div>
       </div>
-      <span className="project-monogram">{project.monogram}</span>
     </div>
   )
 }
 
 function ProjectCard({ project, index }) {
-  const content = (
-    <>
-      <div className="project-visual">
-        <ProjectVisual project={project} index={index} />
-        <div className="project-index">0{index + 1}</div>
+  const hasLinks = Object.values(project.links).some(Boolean)
+
+  return (
+    <article className="project-card" data-reveal>
+      <div className="project-window">
+        <div className="window-bar">
+          <span className="window-dots"><i /><i /><i /></span>
+          <span>/projects/{project.id}</span>
+          <span className="window-status"><i /> {project.status}</span>
+        </div>
+        <div className="project-visual">
+          <ProjectPreview project={project} />
+          <span className="project-number">0{index + 1}</span>
+        </div>
       </div>
+
       <div className="project-copy">
-        <div className="project-heading-row">
-          <div>
-            <p className="project-type">{project.category} · {project.year}</p>
-            <h3>{project.title}</h3>
-          </div>
-          <span className="project-arrow"><Arrow diagonal /></span>
+        <div className="project-meta">
+          <span>{project.type}</span>
+          <span>{project.year}</span>
         </div>
-        <p>{project.description}</p>
+        <h3>{project.title}</h3>
+        <p>{project.summary}</p>
+        <dl className="project-proof">
+          <div><dt>Role</dt><dd>{project.role}</dd></div>
+          {project.impact && <div><dt>Impact</dt><dd>{project.impact}</dd></div>}
+        </dl>
         <div className="project-footer">
-          <ul aria-label="Technologies used">
-            {project.technologies.map((technology) => <li key={technology}>{technology}</li>)}
+          <ul aria-label={`${project.title} technology stack`}>
+            {project.stack.map((item) => <li key={item}>{item}</li>)}
           </ul>
-          <strong>{project.result}</strong>
+          <div className="project-links">
+            {project.links.live && <a href={project.links.live} target="_blank" rel="noreferrer">Live <Arrow diagonal /></a>}
+            {project.links.repo && <a href={project.links.repo} target="_blank" rel="noreferrer">Code <Arrow diagonal /></a>}
+            {project.links.caseStudy && <a href={project.links.caseStudy}>Case study <Arrow /></a>}
+            {!hasLinks && <span>Private build</span>}
+          </div>
         </div>
       </div>
-    </>
+    </article>
   )
-
-  if (project.url) {
-    return (
-      <a className="project-card" href={project.url} target="_blank" rel="noreferrer" aria-label={`View ${project.title} project`}>
-        {content}
-      </a>
-    )
-  }
-
-  return <article className="project-card">{content}</article>
 }
 
-function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [activeFilter, setActiveFilter] = useState('All')
-  const [copyStatus, setCopyStatus] = useState('Copy email')
-  const [darkMode, setDarkMode] = useState(false)
-  const email = 'hello@jordandiaz.dev'
-
-  const filters = useMemo(
-    () => ['All', ...new Set(projects.map((project) => project.category))],
-    [],
-  )
-
-  const visibleProjects = activeFilter === 'All'
-    ? projects
-    : projects.filter((project) => project.category === activeFilter)
-
-  useEffect(() => {
-    const nodes = document.querySelectorAll('[data-reveal]')
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (reduceMotion) {
-      nodes.forEach((node) => node.classList.add('is-visible'))
-      return undefined
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible')
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -5% 0px' },
-    )
-
-    nodes.forEach((node) => observer.observe(node))
-    return () => observer.disconnect()
-  }, [activeFilter])
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
-  }, [darkMode])
-
-  const closeMenu = () => setMenuOpen(false)
-
-  const copyEmail = async () => {
-    try {
-      await navigator.clipboard.writeText(email)
-      setCopyStatus('Copied!')
-    } catch {
-      setCopyStatus(email)
-    }
-    window.setTimeout(() => setCopyStatus('Copy email'), 2200)
+function TerminalPanel({ activeTab, setActiveTab, localTime }) {
+  const handleTabKey = (event, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    let nextIndex = index
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % terminalTabs.length
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + terminalTabs.length) % terminalTabs.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = terminalTabs.length - 1
+    setActiveTab(terminalTabs[nextIndex])
+    document.getElementById(`terminal-tab-${nextIndex}`)?.focus()
   }
 
   return (
+    <div className="terminal-card" data-reveal>
+      <div className="terminal-titlebar">
+        <span className="window-dots"><i /><i /><i /></span>
+        <span>~/portfolio</span>
+        <span className="terminal-branch">main*</span>
+      </div>
+      <div className="terminal-tabs" role="tablist" aria-label="Developer profile files">
+        {terminalTabs.map((tab, index) => (
+          <button
+            id={`terminal-tab-${index}`}
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`terminal-panel-${index}`}
+            tabIndex={activeTab === tab ? 0 : -1}
+            onClick={() => setActiveTab(tab)}
+            onKeyDown={(event) => handleTabKey(event, index)}
+          >
+            <span>{tab.endsWith('.ts') ? 'TS' : tab.endsWith('.json') ? '{}' : 'M'}</span>{tab}
+          </button>
+        ))}
+      </div>
+
+      <div className="terminal-body">
+        {activeTab === 'profile.ts' && (
+          <div id="terminal-panel-0" role="tabpanel" aria-labelledby="terminal-tab-0" className="terminal-code">
+            <span><b>01</b><code><i>const</i> developer = {'{'}</code></span>
+            <span><b>02</b><code>  name: <em>'{profile.name}'</em>,</code></span>
+            <span><b>03</b><code>  role: <em>'{profile.role}'</em>,</code></span>
+            <span><b>04</b><code>  location: <em>'{profile.location}'</em>,</code></span>
+            <span><b>05</b><code>  focus: [<em>'product UI'</em>, <em>'systems'</em>],</code></span>
+            <span><b>06</b><code>  available: <strong>true</strong>,</code></span>
+            <span><b>07</b><code>{'}'} <span className="caret" /></code></span>
+          </div>
+        )}
+        {activeTab === 'stack.json' && (
+          <div id="terminal-panel-1" role="tabpanel" aria-labelledby="terminal-tab-1" className="terminal-code">
+            <span><b>01</b><code>{'{'}</code></span>
+            <span><b>02</b><code>  <em>"ui"</em>: [<strong>"React"</strong>, <strong>"TypeScript"</strong>],</code></span>
+            <span><b>03</b><code>  <em>"app"</em>: [<strong>"Next.js"</strong>, <strong>"Vite"</strong>],</code></span>
+            <span><b>04</b><code>  <em>"data"</em>: [<strong>"GraphQL"</strong>, <strong>"Postgres"</strong>],</code></span>
+            <span><b>05</b><code>  <em>"quality"</em>: [<strong>"a11y"</strong>, <strong>"performance"</strong>]</code></span>
+            <span><b>06</b><code>{'}'}</code></span>
+          </div>
+        )}
+        {activeTab === 'now.md' && (
+          <div id="terminal-panel-2" role="tabpanel" aria-labelledby="terminal-tab-2" className="now-panel">
+            <span className="markdown-heading"># now</span>
+            <p>Building calm, high-signal interfaces for teams shipping complex products.</p>
+            <ul>
+              <li><span>[x]</span> Design systems that scale</li>
+              <li><span>[x]</span> Accessible interaction patterns</li>
+              <li><span>[ ]</span> Your next product</li>
+            </ul>
+          </div>
+        )}
+      </div>
+      <div className="terminal-output">
+        <span><i>$</i> npm run portfolio</span>
+        <span className="ready"><i /> ready</span>
+      </div>
+      <div className="terminal-statusbar">
+        <span>branch: main</span>
+        <span>UTF-8</span>
+        <span>{localTime} EST</span>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  const commandDialogRef = useRef(null)
+  const commandInputRef = useRef(null)
+  const commandTriggerRef = useRef(null)
+  const [activeTerminalTab, setActiveTerminalTab] = useState('profile.ts')
+  const [commandOpen, setCommandOpen] = useState(false)
+  const [commandQuery, setCommandQuery] = useState('')
+  const [activeCommand, setActiveCommand] = useState(0)
+  const [copyStatus, setCopyStatus] = useState('copy email')
+  const [theme, setTheme] = useState(() => localStorage.getItem('portfolio-theme') || 'system')
+  const [localTime, setLocalTime] = useState('')
+  const [activeType, setActiveType] = useState(() => new URLSearchParams(window.location.search).get('type') || 'All')
+  const [projectSearch, setProjectSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '')
+
+  const projectTypes = useMemo(() => ['All', ...new Set(projects.map((project) => project.type))], [])
+  const typeCounts = useMemo(() => Object.fromEntries(projectTypes.map((type) => [
+    type,
+    type === 'All' ? projects.length : projects.filter((project) => project.type === type).length,
+  ])), [projectTypes])
+
+  const visibleProjects = useMemo(() => {
+    const query = projectSearch.trim().toLowerCase()
+    return projects.filter((project) => {
+      const matchesType = activeType === 'All' || project.type === activeType
+      const searchable = [project.title, project.summary, project.role, ...project.stack].join(' ').toLowerCase()
+      return matchesType && (!query || searchable.includes(query))
+    })
+  }, [activeType, projectSearch])
+
+  const copyEmail = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(profile.email)
+      setCopyStatus('email copied')
+    } catch {
+      setCopyStatus(profile.email)
+    }
+    window.setTimeout(() => setCopyStatus('copy email'), 2200)
+  }, [])
+
+  const navigateTo = useCallback((id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const cycleTheme = useCallback(() => {
+    setTheme((current) => current === 'system' ? 'dark' : current === 'dark' ? 'light' : 'system')
+  }, [])
+
+  const openCommandPalette = useCallback(() => {
+    if (!commandDialogRef.current?.open) {
+      commandDialogRef.current?.showModal()
+      setCommandOpen(true)
+      window.requestAnimationFrame(() => commandInputRef.current?.focus())
+    }
+  }, [])
+
+  const closeCommandPalette = useCallback(() => {
+    commandDialogRef.current?.close()
+  }, [])
+
+  const commands = [
+    { icon: '01', label: 'Go to selected work', detail: 'Navigation', action: () => navigateTo('work') },
+    { icon: '02', label: 'Explore the stack', detail: 'Navigation', action: () => navigateTo('stack') },
+    { icon: '03', label: 'View experience', detail: 'Navigation', action: () => navigateTo('experience') },
+    { icon: '@', label: 'Copy email address', detail: profile.email, action: copyEmail },
+    { icon: 'TH', label: `Cycle theme (current: ${theme})`, detail: 'Appearance', action: cycleTheme },
+    { icon: '->', label: 'Start a conversation', detail: 'Open email', action: () => { window.location.href = `mailto:${profile.email}` } },
+  ]
+
+  const filteredCommands = commands.filter((command) => (
+    `${command.label} ${command.detail}`.toLowerCase().includes(commandQuery.toLowerCase())
+  ))
+
+  const runCommand = (command) => {
+    command.action()
+    closeCommandPalette()
+  }
+
+  const handleCommandKeys = (event) => {
+    if (!filteredCommands.length) return
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveCommand((index) => (index + 1) % filteredCommands.length)
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveCommand((index) => (index - 1 + filteredCommands.length) % filteredCommands.length)
+    }
+    if (event.key === 'Home') {
+      event.preventDefault()
+      setActiveCommand(0)
+    }
+    if (event.key === 'End') {
+      event.preventDefault()
+      setActiveCommand(filteredCommands.length - 1)
+    }
+    if (event.key === 'Enter' && filteredCommands[activeCommand]) {
+      event.preventDefault()
+      runCommand(filteredCommands[activeCommand])
+    }
+  }
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const applyTheme = () => {
+      const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme
+      document.documentElement.dataset.theme = resolved
+      document.documentElement.style.colorScheme = resolved
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#080b10' : '#f4f7fb')
+    }
+    applyTheme()
+    localStorage.setItem('portfolio-theme', theme)
+    media.addEventListener('change', applyTheme)
+    return () => media.removeEventListener('change', applyTheme)
+  }, [theme])
+
+  useEffect(() => {
+    const updateTime = () => setLocalTime(new Intl.DateTimeFormat('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York',
+    }).format(new Date()))
+    updateTime()
+    const timer = window.setInterval(updateTime, 30000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        if (commandDialogRef.current?.open) closeCommandPalette()
+        else openCommandPalette()
+      }
+    }
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [closeCommandPalette, openCommandPalette])
+
+  useEffect(() => {
+    document.body.style.overflow = commandOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [commandOpen])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (activeType === 'All') params.delete('type')
+    else params.set('type', activeType)
+    if (projectSearch.trim()) params.set('q', projectSearch.trim())
+    else params.delete('q')
+    const next = `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`
+    window.history.replaceState({}, '', next)
+  }, [activeType, projectSearch])
+
+  useEffect(() => {
+    const nodes = document.querySelectorAll('[data-reveal]')
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      nodes.forEach((node) => node.classList.add('is-visible'))
+      return undefined
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' })
+    nodes.forEach((node) => observer.observe(node))
+    return () => observer.disconnect()
+  }, [activeType, projectSearch])
+
+  return (
     <div className="site-shell">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Jordan Diaz, home" onClick={closeMenu}>
-          <span className="brand-dot" />
-          Jordan Diaz
+        <a className="brand" href="#top" aria-label={`${profile.name}, home`}>
+          <span className="brand-prompt">$</span>
+          <span>{profile.handle}</span>
+          <i aria-hidden="true" />
         </a>
-
-        <button
-          className="menu-toggle"
-          type="button"
-          aria-label="Toggle navigation"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span />
-          <span />
-        </button>
-
-        <nav className={menuOpen ? 'site-nav is-open' : 'site-nav'} aria-label="Primary navigation">
-          <a href="#work" onClick={closeMenu}>Work</a>
-          <a href="#about" onClick={closeMenu}>About</a>
-          <a href="#experience" onClick={closeMenu}>Experience</a>
-          <a href="#contact" onClick={closeMenu}>Let’s talk <Arrow diagonal /></a>
+        <nav className="site-nav" aria-label="Primary navigation">
+          <a href="#work"><span>01.</span>work</a>
+          <a href="#stack"><span>02.</span>stack</a>
+          <a href="#experience"><span>03.</span>experience</a>
+          <a href="#contact"><span>04.</span>contact</a>
         </nav>
-
-        <button
-          className="theme-toggle"
-          type="button"
-          aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
-          onClick={() => setDarkMode((value) => !value)}
-        >
-          <span className="theme-toggle-track"><span /></span>
-          {darkMode ? 'Light' : 'Dark'}
-        </button>
+        <div className="header-actions">
+          <button className="theme-button" type="button" onClick={cycleTheme} aria-label={`Cycle theme. Current setting: ${theme}`}>
+            <span aria-hidden="true">{theme === 'dark' ? 'D' : theme === 'light' ? 'L' : 'A'}</span>
+            <small>{theme}</small>
+          </button>
+          <button ref={commandTriggerRef} className="command-trigger" type="button" onClick={openCommandPalette}>
+            <span>command</span><kbd>Ctrl K</kbd>
+          </button>
+        </div>
       </header>
 
-      <main id="top">
-        <section className="hero section-wrap">
+      <main id="main-content">
+        <section id="top" className="hero page-width">
           <div className="hero-copy" data-reveal>
-            <div className="availability"><i /> Available for select projects</div>
-            <h1>Designing digital experiences with <em>clarity</em> and character.</h1>
-            <p>
-              I’m Jordan, a designer and frontend engineer creating thoughtful websites and
-              products for ambitious teams.
-            </p>
+            <p className="terminal-label"><span>$</span> whoami</p>
+            <h1>I engineer interfaces that <em>ship.</em></h1>
+            <p className="hero-summary">{profile.summary}</p>
             <div className="hero-actions">
-              <a className="button button-dark" href="#work">Explore my work <Arrow /></a>
-              <button className="text-button" type="button" onClick={copyEmail}>{copyStatus}</button>
+              <a className="primary-action" href="#work">View projects <Arrow /></a>
+              <button className="secondary-action" type="button" onClick={copyEmail}><span>/</span> {copyStatus}</button>
+            </div>
+            <div className="hero-presence">
+              <span><i /> {profile.availability}</span>
+              <span>{profile.location}</span>
             </div>
           </div>
-
-          <div className="hero-art" data-reveal>
-            <div className="hero-art-topline">
-              <span>Independent creative developer</span>
-              <span>Based in Boston · Working worldwide</span>
-            </div>
-            <div className="art-stage">
-              <div className="art-disc art-disc-one" />
-              <div className="art-disc art-disc-two" />
-              <img src={heroArtwork} alt="Layered interface illustration" />
-              <div className="art-note art-note-left">Design systems</div>
-              <div className="art-note art-note-right">Creative code</div>
-              <div className="art-stamp"><span>JD</span><small>©26</small></div>
-            </div>
-          </div>
-
-          <div className="hero-stats" data-reveal>
-            {stats.map(([value, label]) => (
-              <div key={label}>
-                <strong>{value}</strong>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
+          <TerminalPanel activeTab={activeTerminalTab} setActiveTab={setActiveTerminalTab} localTime={localTime} />
         </section>
 
-        <section id="work" className="projects section-wrap">
-          <div className="section-intro" data-reveal>
-            <div>
-              <p className="eyebrow">Selected work / 2022—2026</p>
-              <h2>Projects built to be <em>used</em>, not just viewed.</h2>
+        <div className="signal-rail page-width" aria-label="Areas of focus" data-reveal>
+          <span>Currently building</span>
+          <strong>Product interfaces</strong>
+          <strong>Design systems</strong>
+          <strong>Frontend architecture</strong>
+          <strong>Accessible interactions</strong>
+        </div>
+
+        <section id="work" className="work-section page-width">
+          <div className="section-heading" data-reveal>
+            <p className="terminal-label"><span>//</span> selected_work</p>
+            <h2>Builds with real product <em>weight.</em></h2>
+            <p>Selected interfaces and systems built from problem framing through production-ready frontend delivery.</p>
+          </div>
+
+          <div className="project-explorer" data-reveal>
+            <div className="project-search">
+              <label htmlFor="project-search"><span>$</span> find ./projects</label>
+              <input
+                id="project-search"
+                type="search"
+                value={projectSearch}
+                onChange={(event) => setProjectSearch(event.target.value)}
+                placeholder="Search by project or stack..."
+              />
+              <kbd>/</kbd>
             </div>
-            <p>A selection of product, brand, and platform work shaped from early thinking through final frontend delivery.</p>
+            <div className="project-filters" aria-label="Filter projects by type">
+              {projectTypes.map((type) => (
+                <button
+                  type="button"
+                  key={type}
+                  className={activeType === type ? 'is-active' : ''}
+                  aria-pressed={activeType === type}
+                  aria-controls="project-grid"
+                  onClick={() => setActiveType(type)}
+                >
+                  {type.toLowerCase()} <span>[{typeCounts[type]}]</span>
+                </button>
+              ))}
+            </div>
+            <p className="result-count" aria-live="polite">{visibleProjects.length} project{visibleProjects.length === 1 ? '' : 's'} found</p>
           </div>
 
-          <div className="project-filters" aria-label="Filter projects" data-reveal>
-            {filters.map((filter) => (
-              <button
-                type="button"
-                key={filter}
-                className={activeFilter === filter ? 'is-active' : ''}
-                aria-pressed={activeFilter === filter}
-                onClick={() => setActiveFilter(filter)}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-
-          <div className="project-grid">
-            {visibleProjects.map((project, index) => (
-              <ProjectCard key={project.title} project={project} index={index} />
-            ))}
-          </div>
+          {visibleProjects.length > 0 ? (
+            <div id="project-grid" className="project-grid">
+              {visibleProjects.map((project) => (
+                <ProjectCard key={project.id} project={project} index={projects.indexOf(project)} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state" id="project-grid">
+              <span>404</span>
+              <h3>No matching builds.</h3>
+              <p>Try another project name, technology, or type.</p>
+              <button type="button" onClick={() => { setProjectSearch(''); setActiveType('All') }}>Clear filters</button>
+            </div>
+          )}
         </section>
 
-        <section id="about" className="about section-wrap">
-          <div className="about-heading" data-reveal>
-            <p className="eyebrow">What I bring</p>
-            <h2>One partner from first idea to <em>finished</em> interface.</h2>
+        <section id="stack" className="stack-section page-width">
+          <div className="section-heading compact" data-reveal>
+            <p className="terminal-label"><span>//</span> capabilities</p>
+            <h2>From system design to the final <em>pixel.</em></h2>
           </div>
-          <div className="service-list">
-            {services.map((service) => (
-              <article key={service.number} data-reveal>
-                <span>{service.number}</span>
-                <h3>{service.title}</h3>
-                <p>{service.description}</p>
+          <div className="capability-grid">
+            {capabilities.map((capability) => (
+              <article key={capability.index} className="capability-card" data-reveal>
+                <div><span>{capability.index}</span><code>{capability.tag}()</code></div>
+                <h3>{capability.title}</h3>
+                <p>{capability.description}</p>
+              </article>
+            ))}
+          </div>
+          <div className="stack-grid">
+            {stackGroups.map((group) => (
+              <article key={group.key} className="stack-card" data-reveal>
+                <div className="stack-card-head"><span>module</span><code>{group.key}.config.js</code></div>
+                <h3>{group.label}</h3>
+                <p>{group.description}</p>
+                <ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul>
               </article>
             ))}
           </div>
         </section>
 
-        <section id="experience" className="experience section-wrap">
-          <div className="experience-quote" data-reveal>
-            <p className="eyebrow">A little about me</p>
-            <blockquote>
-              “I care about the quiet details—the spacing, words, and interactions that make a product feel <em>obvious</em>.”
-            </blockquote>
+        <section id="experience" className="experience-section page-width">
+          <div className="experience-intro" data-reveal>
+            <p className="terminal-label"><span>$</span> git log --career</p>
+            <h2>Engineering with product judgment.</h2>
+            <p>I care about the quiet details: clean state, readable systems, and interactions that make a product feel obvious.</p>
+            <a href={`mailto:${profile.email}?subject=Resume request`}>Request full resume <Arrow /></a>
           </div>
-          <div className="experience-list" data-reveal>
-            <p className="list-label">Experience</p>
-            {experience.map((item) => (
+          <div className="git-log" data-reveal>
+            {experience.map((item, index) => (
               <article key={item.period}>
-                <span>{item.period}</span>
-                <div>
-                  <h3>{item.role}</h3>
-                  <p>{item.company}</p>
-                </div>
+                <span className="commit-node" aria-hidden="true" />
+                <div className="commit-meta"><code>commit 0{experience.length - index}fd{index}a</code><span>{item.period}</span></div>
+                <h3>{item.role}</h3>
+                <p className="company">{item.company}</p>
+                <p>{item.detail}</p>
               </article>
             ))}
-            <a href={`mailto:${email}?subject=Résumé request`}>Request full résumé <Arrow diagonal /></a>
           </div>
         </section>
       </main>
 
-      <footer id="contact" className="footer">
-        <div className="footer-main section-wrap" data-reveal>
-          <p className="eyebrow">Have something in mind?</p>
-          <h2>Let’s make it <em>real.</em></h2>
-          <a href={`mailto:${email}`}>{email} <Arrow diagonal /></a>
-        </div>
-        <div className="footer-meta section-wrap">
-          <span>© 2026 Jordan Diaz</span>
-          <div>
-            <a href={`mailto:${email}`}>Email</a>
-            <a href="#work">Selected work</a>
-            <a href="#top">Back to top ↑</a>
+      <footer id="contact" className="site-footer">
+        <div className="footer-panel page-width" data-reveal>
+          <div className="footer-command"><span>&gt;</span> available_for = <em>"select projects"</em><i /></div>
+          <h2>Let&apos;s build something <em>useful.</em></h2>
+          <p>Have a product, platform, or interface that deserves a stronger frontend?</p>
+          <div className="footer-actions">
+            <a href={`mailto:${profile.email}`}>{profile.email} <Arrow diagonal /></a>
+            <button type="button" onClick={copyEmail}>{copyStatus}</button>
           </div>
         </div>
+        <div className="footer-meta page-width">
+          <span>(c) 2026 {profile.name}</span>
+          <span>Built with React + intent</span>
+          <a href="#top">Back to top [up]</a>
+        </div>
       </footer>
+
+      <dialog
+        ref={commandDialogRef}
+        className="command-dialog"
+        aria-labelledby="command-title"
+        onClose={() => {
+          setCommandOpen(false)
+          setCommandQuery('')
+          setActiveCommand(0)
+          commandTriggerRef.current?.focus()
+        }}
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) closeCommandPalette()
+        }}
+      >
+        <div className="command-shell">
+          <div className="command-search-row">
+            <span aria-hidden="true">&gt;_</span>
+            <input
+              ref={commandInputRef}
+              value={commandQuery}
+              onChange={(event) => {
+                setCommandQuery(event.target.value)
+                setActiveCommand(0)
+              }}
+              onKeyDown={handleCommandKeys}
+              aria-label="Search commands"
+              placeholder="Type a command..."
+              autoComplete="off"
+            />
+            <kbd>ESC</kbd>
+          </div>
+          <div className="command-head">
+            <h2 id="command-title">Command palette</h2>
+            <span>{filteredCommands.length} actions</span>
+          </div>
+          <div className="command-list" role="listbox" aria-label="Available commands">
+            {filteredCommands.map((command, index) => (
+              <button
+                type="button"
+                key={command.label}
+                role="option"
+                aria-selected={index === activeCommand}
+                className={index === activeCommand ? 'is-active' : ''}
+                onMouseEnter={() => setActiveCommand(index)}
+                onClick={() => runCommand(command)}
+              >
+                <span className="command-icon">{command.icon}</span>
+                <span><strong>{command.label}</strong><small>{command.detail}</small></span>
+                <kbd>ENTER</kbd>
+              </button>
+            ))}
+            {!filteredCommands.length && <p className="no-commands">No command found. Try "work" or "theme".</p>}
+          </div>
+          <div className="command-help"><span>[up/down] navigate</span><span>[enter] select</span><span>[esc] close</span></div>
+        </div>
+      </dialog>
+
+      <div className="sr-status" aria-live="polite">{copyStatus === 'email copied' ? 'Email address copied to clipboard' : ''}</div>
     </div>
   )
 }

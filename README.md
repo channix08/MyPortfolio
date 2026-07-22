@@ -4,13 +4,16 @@ A responsive portfolio built with React and Vite.
 
 ## Add a project
 
-Open `src/data/projects.js`, duplicate one project object, and replace its content. The project grid and filters update automatically.
+Open `src/data/projects.js`, duplicate one project object, and replace its content. The project explorer, search, filters, counts, and fallback artwork update automatically.
 
-- `title`, `category`, `year`, and `description` control the visible project details.
-- `technologies` accepts any number of labels.
-- `accent` changes the generated project artwork color.
-- `cover` is optional. Add an image to `public/projects` and use a path such as `/projects/my-project.jpg`.
-- `url` is optional. When supplied, the whole card becomes a link.
+- `title`, `type`, `year`, `status`, and `summary` control the visible project details.
+- `role` and optional `impact` add project proof.
+- `stack` accepts any number of technology labels.
+- `tone` selects a controlled preview color: `cyan`, `green`, `violet`, or `amber`.
+- `image` is optional. Add an image to `public/projects` and use a path such as `/projects/my-project.jpg`.
+- `links.live`, `links.repo`, and `links.caseStudy` are all optional and stay hidden when empty.
+
+Update the portfolio profile, technical stack, capabilities, and experience in `src/data/site.js`.
 
 ## Run locally
 

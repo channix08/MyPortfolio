@@ -1,28 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
-  --paper: #f2f0e9;
-  --surface: #e7e4db;
-  --ink: #171714;
-  --muted: #68675f;
-  --line: rgba(23, 23, 20, 0.18);
-  --strong-line: rgba(23, 23, 20, 0.72);
-  --accent: #ff5c35;
-  color: var(--ink);
-  background: var(--paper);
-  font-family: 'DM Sans', Arial, sans-serif;
+  --bg: #080b10;
+  --surface: #0d121a;
+  --surface-2: #111923;
+  --surface-hover: #162131;
+  --text: #f4f7fb;
+  --muted: #9aa7ba;
+  --dim: #657187;
+  --line: #233044;
+  --line-strong: #354760;
+  --signal: #9eff6e;
+  --signal-ink: #08110a;
+  --cyan: #65d7ff;
+  --violet: #b6a0ff;
+  --amber: #ffbd66;
+  --danger: #ff7085;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  color: var(--text);
+  background: var(--bg);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-:root[data-theme='dark'] {
-  --paper: #151513;
-  --surface: #232320;
-  --ink: #f1efe7;
-  --muted: #aaa89f;
-  --line: rgba(241, 239, 231, 0.18);
-  --strong-line: rgba(241, 239, 231, 0.72);
+:root[data-theme='light'] {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #edf2f8;
+  --surface-hover: #e5ecf5;
+  --text: #0b111a;
+  --muted: #526077;
+  --dim: #718096;
+  --line: #d5deea;
+  --line-strong: #aebdd0;
+  --signal: #4f9e37;
+  --signal-ink: #f7fff4;
+  --cyan: #087697;
+  --violet: #6d56c7;
+  --amber: #956318;
+  --danger: #bd3851;
+  --shadow: 0 24px 70px rgba(37, 53, 73, 0.16);
 }
 
 * { box-sizing: border-box; }
@@ -33,32 +52,38 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--paper);
+  background: var(--bg);
 }
 
 body,
 button,
-a { cursor: default; }
+input { cursor: default; }
 
 a,
-button { font: inherit; }
+button,
+input { font: inherit; }
 
 a { color: inherit; }
 
-button { color: inherit; }
+button,
+input { color: inherit; }
 
 button:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
 }
 
 ::selection {
-  color: #171714;
-  background: #c7ff4a;
+  color: var(--signal-ink);
+  background: var(--signal);
 }
 
 @media (hover: hover) {
   a,
-  button { cursor: pointer; }
+  button,
+  input { cursor: pointer; }
+
+  input { cursor: text; }
 }
