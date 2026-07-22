@@ -301,7 +301,7 @@ function App() {
                 </div>
               </article>
             ))}
-            <a href="/resume.pdf" target="_blank">View full résumé <Arrow diagonal /></a>
+            <a href={`mailto:${email}?subject=Résumé request`}>Request full résumé <Arrow diagonal /></a>
           </div>
         </section>
       </main>
@@ -315,8 +315,8 @@ function App() {
         <div className="footer-meta section-wrap">
           <span>© 2026 Jordan Diaz</span>
           <div>
-            <a href="https://www.linkedin.com" target="_blank" rel="noreferrer">LinkedIn</a>
-            <a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
+            <a href={`mailto:${email}`}>Email</a>
+            <a href="#work">Selected work</a>
             <a href="#top">Back to top ↑</a>
           </div>
         </div>
