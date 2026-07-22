@@ -262,6 +262,145 @@ h2 em {
   color: var(--muted);
 }
 
+.hero-workspace {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.profile-photo-card {
+  min-height: 136px;
+  padding: 11px 14px 11px 11px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--cyan), transparent 94%), transparent 45%),
+    var(--surface);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.22);
+}
+
+.profile-photo-frame {
+  width: 112px;
+  height: 112px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    radial-gradient(circle at 65% 25%, color-mix(in srgb, var(--cyan), transparent 55%), transparent 48%),
+    var(--surface-2);
+  background-size: 18px 18px, 18px 18px, auto, auto;
+}
+
+.profile-photo-frame::after {
+  content: '';
+  width: 62%;
+  height: 62%;
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--cyan), transparent 55%);
+  border-radius: 50%;
+}
+
+.profile-photo-frame img {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+  display: block;
+  object-fit: cover;
+}
+
+.profile-photo-frame > span {
+  position: relative;
+  z-index: 2;
+  color: var(--text);
+  font: 600 2.1rem/1 'Space Grotesk', sans-serif;
+  letter-spacing: -0.08em;
+}
+
+.photo-corner {
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  z-index: 3;
+  border-color: var(--signal);
+  border-style: solid;
+}
+
+.photo-corner-one {
+  left: 7px;
+  top: 7px;
+  border-width: 1px 0 0 1px;
+}
+
+.photo-corner-two {
+  right: 7px;
+  bottom: 7px;
+  border-width: 0 1px 1px 0;
+}
+
+.profile-photo-copy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.profile-photo-copy code {
+  color: var(--cyan);
+  font: 500 0.58rem/1 'JetBrains Mono', monospace;
+}
+
+.profile-photo-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-photo-copy > span {
+  color: var(--muted);
+  font: 500 0.63rem/1.4 'JetBrains Mono', monospace;
+}
+
+.profile-photo-meta {
+  align-self: stretch;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-left: 1px solid var(--line);
+  color: var(--dim);
+  font: 500 0.52rem/1 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
+.profile-photo-meta > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--signal);
+}
+
+.profile-photo-meta i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--signal), transparent 35%);
+}
+
 .terminal-card {
   min-width: 0;
   overflow: hidden;
@@ -1083,7 +1222,7 @@ h2 em {
   .site-nav { display: none; }
   .hero { min-height: auto; grid-template-columns: 1fr; padding-top: 150px; }
   .hero-copy { max-width: 850px; }
-  .terminal-card { width: min(100%, 760px); }
+  .hero-workspace { width: min(100%, 760px); }
   .project-explorer { grid-template-columns: 1fr; }
   .result-count { justify-self: end; }
   .experience-section { grid-template-columns: 1fr; }
@@ -1127,6 +1266,10 @@ h2 em {
   .footer-actions a,
   .footer-actions button { width: 100%; }
   .terminal-body { min-height: 290px; padding: 32px 12px 24px; }
+  .profile-photo-card { min-height: 110px; grid-template-columns: 88px minmax(0, 1fr); gap: 13px; padding: 10px; }
+  .profile-photo-frame { width: 88px; height: 88px; }
+  .profile-photo-frame > span { font-size: 1.65rem; }
+  .profile-photo-meta { display: none; }
   .terminal-tabs button { padding-inline: 11px; }
   .terminal-code { font-size: 0.64rem; }
   .terminal-code > span { grid-template-columns: 22px 1fr; }

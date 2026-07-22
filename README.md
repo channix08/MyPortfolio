@@ -15,6 +15,14 @@ Open `src/data/projects.js`, duplicate one project object, and replace its conte
 
 Update the portfolio profile, technical stack, capabilities, and experience in `src/data/site.js`.
 
+## Add your profile picture
+
+1. Add your image to `public/profile.jpg`.
+2. Open `src/data/site.js` and set `photo` to `/profile.jpg`.
+3. Use `photoPosition` to adjust the crop, for example `50% 25%` to show more of the upper part of the photo.
+
+The hero shows a styled initials placeholder until a photo path is supplied.
+
 ## Run locally
 
 ```bash

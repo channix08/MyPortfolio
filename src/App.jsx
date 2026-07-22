@@ -171,6 +171,41 @@ function TerminalPanel({ activeTab, setActiveTab, localTime }) {
   )
 }
 
+function ProfilePhotoCard() {
+  const initials = profile.name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+
+  return (
+    <div className="profile-photo-card" data-reveal>
+      <div className="profile-photo-frame">
+        {profile.photo ? (
+          <img
+            src={profile.photo}
+            alt={profile.photoAlt}
+            style={{ objectPosition: profile.photoPosition }}
+          />
+        ) : (
+          <span aria-label="Profile photo placeholder">{initials}</span>
+        )}
+        <i className="photo-corner photo-corner-one" aria-hidden="true" />
+        <i className="photo-corner photo-corner-two" aria-hidden="true" />
+      </div>
+      <div className="profile-photo-copy">
+        <code>profile.asset</code>
+        <strong>{profile.name}</strong>
+        <span>{profile.role}</span>
+      </div>
+      <div className="profile-photo-meta">
+        <span><i /> {profile.photo ? 'image loaded' : 'image slot ready'}</span>
+        <small>1:1 / auto crop</small>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const commandDialogRef = useRef(null)
   const commandInputRef = useRef(null)
@@ -382,7 +417,10 @@ function App() {
               <span>{profile.location}</span>
             </div>
           </div>
-          <TerminalPanel activeTab={activeTerminalTab} setActiveTab={setActiveTerminalTab} localTime={localTime} />
+          <div className="hero-workspace">
+            <ProfilePhotoCard />
+            <TerminalPanel activeTab={activeTerminalTab} setActiveTab={setActiveTerminalTab} localTime={localTime} />
+          </div>
         </section>
 
         <div className="signal-rail page-width" aria-label="Areas of focus" data-reveal>
