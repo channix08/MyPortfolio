@@ -18,6 +18,36 @@ function validHttpUrl(value) {
   }
 }
 
+function validResourceUrl(value) {
+  if (typeof value !== 'string') return ''
+  const candidate = value.trim()
+  if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate
+  return validHttpUrl(candidate)
+}
+
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value)
+      return
+    } catch {
+      // Fall back for browsers that block the Clipboard API.
+    }
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  textarea.style.pointerEvents = 'none'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const copied = document.execCommand('copy')
+  textarea.remove()
+  if (!copied) throw new Error('Clipboard unavailable')
+}
+
 const emailValue = typeof profile.email === 'string' ? profile.email.trim() : ''
 const githubValue = validHttpUrl(profile.github)
 const githubLabel = typeof profile.githubLabel === 'string' ? profile.githubLabel.trim() : ''
@@ -28,7 +58,9 @@ const contactLabel = hasEmail ? emailValue : (githubLabel || githubValue)
 const contactHref = hasEmail ? `mailto:${emailValue}` : githubValue
 const contactIsExternal = Boolean(githubValue && !hasEmail)
 const copyDefaultLabel = hasContact ? (hasEmail ? 'copy email' : 'copy GitHub') : 'contact unavailable'
-const resumeHref = hasEmail ? `${contactHref}?subject=Resume%20request` : contactHref
+const resumeValue = validResourceUrl(profile.resumeUrl)
+const resumeHref = resumeValue || (hasEmail ? `${contactHref}?subject=Resume%20request` : contactHref)
+const resumeIsExternal = Boolean(resumeValue && validHttpUrl(resumeValue)) || (!resumeValue && contactIsExternal)
 const currentYear = new Date().getFullYear()
 
 function getInitialProjectType() {
@@ -96,6 +128,7 @@ function ProjectPreview({ project }) {
 
 function ProjectCard({ project, index }) {
   const hasLinks = Object.values(project.links ?? {}).some(Boolean)
+  const caseStudyIsExternal = Boolean(validHttpUrl(project.links.caseStudy))
 
   return (
     <article className="project-card">
@@ -127,9 +160,26 @@ function ProjectCard({ project, index }) {
             {project.stack.map((item) => <li key={item}>{item}</li>)}
           </ul>
           <div className="project-links">
-            {project.links.live && <a href={project.links.live} target="_blank" rel="noreferrer">Live <Arrow diagonal /></a>}
-            {project.links.repo && <a href={project.links.repo} target="_blank" rel="noreferrer">Code <Arrow diagonal /></a>}
-            {project.links.caseStudy && <a href={project.links.caseStudy}>Case study <Arrow /></a>}
+            {project.links.live && (
+              <a href={project.links.live} target="_blank" rel="noreferrer" aria-label={`View ${project.title} live (opens in a new tab)`}>
+                Live <Arrow diagonal />
+              </a>
+            )}
+            {project.links.repo && (
+              <a href={project.links.repo} target="_blank" rel="noreferrer" aria-label={`View ${project.title} source code (opens in a new tab)`}>
+                Code <Arrow diagonal />
+              </a>
+            )}
+            {project.links.caseStudy && (
+              <a
+                href={project.links.caseStudy}
+                target={caseStudyIsExternal ? '_blank' : undefined}
+                rel={caseStudyIsExternal ? 'noreferrer' : undefined}
+                aria-label={`Read the ${project.title} case study${caseStudyIsExternal ? ' (opens in a new tab)' : ''}`}
+              >
+                Case study <Arrow diagonal={caseStudyIsExternal} />
+              </a>
+            )}
             {!hasLinks && <span>Private build</span>}
           </div>
         </div>
@@ -197,8 +247,7 @@ function TerminalPanel() {
       </div>
 
       <div className="terminal-body">
-        {activeTab === 'profile.ts' && (
-          <div id="terminal-panel-0" role="tabpanel" aria-labelledby="terminal-tab-0" className="terminal-code">
+        <div id="terminal-panel-0" role="tabpanel" aria-labelledby="terminal-tab-0" className="terminal-code" hidden={activeTab !== 'profile.ts'}>
             <span><b>01</b><code><i>const</i> developer = {'{'}</code></span>
             <span><b>02</b><code>  name: <em>'{profile.name}'</em>,</code></span>
             <span><b>03</b><code>  role: <em>'{profile.role}'</em>,</code></span>
@@ -206,20 +255,20 @@ function TerminalPanel() {
             <span><b>05</b><code>  focus: [<em>'product UI'</em>, <em>'systems'</em>],</code></span>
             <span><b>06</b><code>  available: <strong>true</strong>,</code></span>
             <span><b>07</b><code>{'}'} <span className="caret" /></code></span>
-          </div>
-        )}
-        {activeTab === 'stack.json' && (
-          <div id="terminal-panel-1" role="tabpanel" aria-labelledby="terminal-tab-1" className="terminal-code">
+        </div>
+        <div id="terminal-panel-1" role="tabpanel" aria-labelledby="terminal-tab-1" className="terminal-code" hidden={activeTab !== 'stack.json'}>
             <span><b>01</b><code>{'{'}</code></span>
-            <span><b>02</b><code>  <em>"ui"</em>: [<strong>"React"</strong>, <strong>"TypeScript"</strong>],</code></span>
-            <span><b>03</b><code>  <em>"app"</em>: [<strong>"Next.js"</strong>, <strong>"Vite"</strong>],</code></span>
-            <span><b>04</b><code>  <em>"data"</em>: [<strong>"GraphQL"</strong>, <strong>"Postgres"</strong>],</code></span>
-            <span><b>05</b><code>  <em>"quality"</em>: [<strong>"a11y"</strong>, <strong>"performance"</strong>]</code></span>
-            <span><b>06</b><code>{'}'}</code></span>
-          </div>
-        )}
-        {activeTab === 'now.md' && (
-          <div id="terminal-panel-2" role="tabpanel" aria-labelledby="terminal-tab-2" className="now-panel">
+            {stackGroups.slice(0, 3).map((group, index) => (
+              <span key={group.key}>
+                <b>{String(index + 2).padStart(2, '0')}</b>
+                <code>  <em>"{group.key}"</em>: [{group.items.slice(0, 2).map((item, itemIndex) => (
+                  <span key={item}><strong>"{item}"</strong>{itemIndex < Math.min(group.items.length, 2) - 1 ? ', ' : ''}</span>
+                ))}],</code>
+              </span>
+            ))}
+            <span><b>05</b><code>{'}'}</code></span>
+        </div>
+        <div id="terminal-panel-2" role="tabpanel" aria-labelledby="terminal-tab-2" className="now-panel" hidden={activeTab !== 'now.md'}>
             <span className="markdown-heading"># now</span>
             <p>Building calm, high-signal interfaces for teams shipping complex products.</p>
             <ul>
@@ -227,8 +276,7 @@ function TerminalPanel() {
               <li><span>[x]</span> Accessible interaction patterns</li>
               <li><span>[ ]</span> Your next product</li>
             </ul>
-          </div>
-        )}
+        </div>
       </div>
       <div className="terminal-output">
         <span><i>$</i> npm run portfolio</span>
@@ -244,6 +292,7 @@ function TerminalPanel() {
 }
 
 function ProfilePhotoCard() {
+  const [photoStatus, setPhotoStatus] = useState(profile.photo ? 'loading' : 'empty')
   const initials = profile.name
     .split(' ')
     .map((part) => part[0])
@@ -253,7 +302,7 @@ function ProfilePhotoCard() {
   return (
     <div className="profile-photo-card" data-reveal>
       <div className="profile-photo-frame">
-        {profile.photo ? (
+        {profile.photo && photoStatus !== 'error' ? (
           <img
             src={profile.photo}
             alt={profile.photoAlt}
@@ -261,6 +310,8 @@ function ProfilePhotoCard() {
             height="320"
             decoding="async"
             style={{ objectPosition: profile.photoPosition }}
+            onLoad={() => setPhotoStatus('loaded')}
+            onError={() => setPhotoStatus('error')}
           />
         ) : (
           <span aria-label="Profile photo placeholder">{initials}</span>
@@ -274,7 +325,7 @@ function ProfilePhotoCard() {
         <span>{profile.role}</span>
       </div>
       <div className="profile-photo-meta">
-        <span><i /> {profile.photo ? 'image loaded' : 'image slot ready'}</span>
+        <span><i /> {{ loading: 'loading image', loaded: 'image loaded', error: 'initials fallback', empty: 'image slot ready' }[photoStatus]}</span>
         <small>1:1 / auto crop</small>
       </div>
     </div>
@@ -311,8 +362,7 @@ function App() {
   const copyContact = useCallback(async () => {
     if (!hasContact) return
     try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable')
-      await navigator.clipboard.writeText(contactValue)
+      await copyText(contactValue)
       setCopyStatus(hasEmail ? 'email copied' : 'GitHub copied')
     } catch {
       setCopyStatus('copy failed')
@@ -493,7 +543,7 @@ function App() {
             <small>{theme}</small>
           </button>
           <button ref={commandTriggerRef} className="command-trigger" type="button" onClick={openCommandPalette}>
-            <span>command</span><kbd>Ctrl K</kbd>
+            <span>command</span><kbd>Ctrl / ⌘ K</kbd>
           </button>
         </div>
       </header>
@@ -505,7 +555,7 @@ function App() {
         <a href="#contact"><span>04</span>Contact</a>
       </nav>
 
-      <main id="main-content">
+      <main id="main-content" tabIndex="-1">
         <section id="top" className="hero page-width">
           <div className="hero-copy" data-reveal>
             <p className="terminal-label"><span>$</span> whoami</p>
@@ -517,7 +567,13 @@ function App() {
               {hasContact && (hasEmail ? (
                 <button className="secondary-action" type="button" onClick={copyContact}><span>/</span> {copyStatus}</button>
               ) : (
-                <a className="secondary-action" href={contactHref} target="_blank" rel="noreferrer">
+                <a
+                  className="secondary-action"
+                  href={contactHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open GitHub profile (opens in a new tab)"
+                >
                   GitHub profile <Arrow diagonal />
                 </a>
               ))}
@@ -562,7 +618,7 @@ function App() {
               />
               <kbd>/</kbd>
             </div>
-            <div className="project-filters" aria-label="Filter projects by type">
+            <div className="project-filters" role="group" aria-label="Filter projects by type">
               {projectTypes.map((type) => (
                 <button
                   type="button"
@@ -626,13 +682,15 @@ function App() {
             <p className="terminal-label"><span>$</span> git log --career</p>
             <h2>Engineering with product judgment.</h2>
             <p>I care about the quiet details: clean state, readable systems, and interactions that make a product feel obvious.</p>
-            {hasContact && (
+            {(hasContact || resumeValue) && (
               <a
                 href={resumeHref}
-                target={contactIsExternal ? '_blank' : undefined}
-                rel={contactIsExternal ? 'noreferrer' : undefined}
+                target={resumeIsExternal ? '_blank' : undefined}
+                rel={resumeIsExternal ? 'noreferrer' : undefined}
+                download={resumeValue.startsWith('/') ? true : undefined}
+                aria-label={resumeIsExternal ? `${resumeValue ? 'Download resume' : 'View GitHub profile'} (opens in a new tab)` : undefined}
               >
-                {hasEmail ? 'Request full resume' : 'View GitHub profile'} <Arrow />
+                {resumeValue ? 'Download resume' : hasEmail ? 'Request full resume' : 'View GitHub profile'} <Arrow diagonal={resumeIsExternal} />
               </a>
             )}
           </div>
@@ -662,6 +720,7 @@ function App() {
                   href={contactHref}
                   target={contactIsExternal ? '_blank' : undefined}
                   rel={contactIsExternal ? 'noreferrer' : undefined}
+                  aria-label={contactIsExternal ? `Open ${contactLabel} (opens in a new tab)` : undefined}
                 >
                   <span>{contactLabel}</span> <Arrow diagonal />
                 </a>
@@ -715,6 +774,7 @@ function App() {
               autoComplete="off"
             />
             <kbd>ESC</kbd>
+            <button className="command-close" type="button" onClick={closeCommandPalette} aria-label="Close command palette">×</button>
           </div>
           <div className="command-head">
             <h2 id="command-title">Command palette</h2>

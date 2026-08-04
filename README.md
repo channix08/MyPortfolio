@@ -11,12 +11,13 @@ npm install
 npm run dev
 ```
 
-Before publishing, check the project with:
+Before publishing, run the complete quality check:
 
 ```bash
-npm run lint
-npm run build
+npm run check
 ```
+
+This runs ESLint, the automated tests, content/link/asset validation, and the production build.
 
 ## Import a public GitHub project
 
@@ -28,26 +29,30 @@ npm run project:github -- channix08/Study-Mate
 
 The importer reads the public GitHub repository and its languages, then adds or updates a normalized project in `src/data/github-projects.json`. Search, filters, counts, links, and fallback artwork update automatically.
 
-Preview an import without changing files:
+Preview the exact saved record without changing files:
 
 ```bash
 npm run project:github -- channix08/Study-Mate --dry-run
 ```
 
-Run the same import again whenever the repository metadata changes. Public repositories work without a token; GitHub's normal unauthenticated API rate limit applies.
+Run the same import again whenever the repository metadata changes. Existing `overrides` are preserved in both preview and real updates. Public repositories work without a token; GitHub's normal unauthenticated API rate limit applies.
 
-To customize an imported card without losing your edits on the next import, add fields inside its `overrides` object. You can override `summary`, `type`, `role`, `impact`, `stack`, `tone`, `image`, or individual `links`.
+To customize an imported card without losing your edits on the next import, add fields inside its `overrides` object. You can override `summary`, `type`, `role`, `impact`, `stack`, `tone`, `image`, `featured`, or individual `links`. Set `"featured": false` inside `overrides` to hide an imported repository without deleting it.
 
 ## Add or customize a project manually
 
 Edit `src/data/projects.js` for hand-written case studies, or use the `overrides` object on an imported entry in `src/data/github-projects.json`.
+
+The file includes hidden examples. Replace an example with your own details and change `featured` to `true` only when it is ready to publish.
 
 - `title`, `type`, `year`, `status`, and `summary` control visible details.
 - `role` and optional `impact` add project proof.
 - `stack` accepts one or more technology labels.
 - `tone` supports `cyan`, `green`, `violet`, or `amber`.
 - `image` is optional. Put an image in `public/projects` and use a path such as `/projects/my-project.jpg`.
-- `links.live`, `links.repo`, and `links.caseStudy` are optional and stay hidden when empty.
+- `links.live` and `links.repo` must use complete `https://...` or `http://...` URLs.
+- `links.caseStudy` can use a complete URL or an internal path such as `/case-studies/my-project`.
+- Empty links stay hidden. Unsafe or malformed link protocols are rejected by `npm run validate` and omitted at runtime.
 
 The app normalizes missing optional fields so an incomplete project cannot break the page.
 
@@ -62,3 +67,5 @@ To add a profile picture:
 3. Adjust `photoPosition`, such as `50% 25%`, to control the crop.
 
 Leave `photo` empty to keep the styled initials placeholder. Add an email when ready; until then, the interface uses the configured GitHub profile as the contact method.
+
+To add a downloadable resume, place it at `public/resume.pdf` and set `resumeUrl` to `/resume.pdf`. Leave it empty to keep the GitHub/contact fallback.

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 
 const API_ROOT = 'https://api.github.com/repos'
 const PROJECTS_FILE = new URL('../src/data/github-projects.json', import.meta.url)
@@ -16,7 +18,7 @@ Options:
 Example:
   node scripts/import-github-project.mjs channix08/MyPortfolio --dry-run`
 
-function parseArguments(args) {
+export function parseArguments(args) {
   if (args.includes('--help') || args.includes('-h')) {
     return { help: true }
   }
@@ -38,7 +40,7 @@ function parseArguments(args) {
   }
 }
 
-function validateRepositorySlug(slug) {
+export function validateRepositorySlug(slug) {
   if (slug !== slug.trim()) {
     throw new Error('Repository names cannot start or end with whitespace.')
   }
@@ -73,8 +75,12 @@ async function fetchGitHubJson(url, resourceName) {
         'User-Agent': 'portfolio-project-importer',
         'X-GitHub-Api-Version': '2022-11-28',
       },
+      signal: AbortSignal.timeout(12000),
     })
   } catch (error) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      throw new Error(`GitHub timed out while fetching ${resourceName}. Try again when your connection is stable.`)
+    }
     throw new Error(`Could not connect to GitHub while fetching ${resourceName}: ${error.message}`)
   }
 
@@ -110,7 +116,7 @@ async function fetchGitHubJson(url, resourceName) {
   }
 }
 
-function safeHomepage(value) {
+export function safeHomepage(value) {
   if (!value) return ''
 
   try {
@@ -121,7 +127,7 @@ function safeHomepage(value) {
   }
 }
 
-function buildStack(languages, primaryLanguage) {
+export function buildStack(languages, primaryLanguage) {
   const detectedLanguages = Object.entries(languages)
     .filter(([name, bytes]) => name && Number.isFinite(bytes) && bytes > 0)
     .sort(([nameA, bytesA], [nameB, bytesB]) => bytesB - bytesA || nameA.localeCompare(nameB))
@@ -145,7 +151,7 @@ function buildImpact(repository) {
   return metrics.join(' / ')
 }
 
-function mapRepositoryToProject(repository, languages) {
+export function mapRepositoryToProject(repository, languages) {
   if (!Number.isSafeInteger(repository.id) || typeof repository.name !== 'string') {
     throw new Error('GitHub returned incomplete repository metadata.')
   }
@@ -219,6 +225,31 @@ async function writeProjects(projects) {
   }
 }
 
+export function upsertProject(projects, project) {
+  const nextProjects = [...projects]
+  const existingIndex = nextProjects.findIndex((item) => item?.id === project.id)
+  const action = existingIndex === -1 ? 'Added' : 'Updated'
+
+  if (existingIndex === -1) {
+    nextProjects.push(project)
+  } else {
+    const existingOverrides = nextProjects[existingIndex]?.overrides
+    const nextProject = {
+      ...project,
+      overrides: existingOverrides && typeof existingOverrides === 'object' && !Array.isArray(existingOverrides)
+        ? existingOverrides
+        : {},
+    }
+    nextProjects[existingIndex] = nextProject
+  }
+
+  return {
+    action,
+    projects: nextProjects,
+    project: nextProjects[existingIndex === -1 ? nextProjects.length - 1 : existingIndex],
+  }
+}
+
 async function main() {
   let options
   try {
@@ -249,31 +280,21 @@ async function main() {
 
     const project = mapRepositoryToProject(repositoryData, languages)
 
+    const projects = await readProjects()
+    const result = upsertProject(projects, project)
+
     if (options.dryRun) {
-      console.log(JSON.stringify(project, null, 2))
+      console.log(JSON.stringify(result.project, null, 2))
       return
     }
 
-    const projects = await readProjects()
-    const existingIndex = projects.findIndex((item) => item?.id === project.id)
-    const action = existingIndex === -1 ? 'Added' : 'Updated'
-
-    if (existingIndex === -1) {
-      projects.push(project)
-    } else {
-      const existingOverrides = projects[existingIndex]?.overrides
-      project.overrides = existingOverrides && typeof existingOverrides === 'object' && !Array.isArray(existingOverrides)
-        ? existingOverrides
-        : {}
-      projects[existingIndex] = project
-    }
-
-    await writeProjects(projects)
-    console.log(`${action} ${repositoryData.full_name} in src/data/github-projects.json.`)
+    await writeProjects(result.projects)
+    console.log(`${result.action} ${repositoryData.full_name} in src/data/github-projects.json.`)
   } catch (error) {
     console.error(`Error: ${error.message}`)
     process.exitCode = 1
   }
 }
 
-await main()
+const isDirectRun = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))
+if (isDirectRun) await main()

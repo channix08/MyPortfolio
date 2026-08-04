@@ -8,10 +8,13 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/prepare-sites.mjs",
+    "build": "npm run validate && vite build && node scripts/prepare-sites.mjs",
+    "check": "npm run lint && npm run test && npm run build",
     "lint": "eslint .",
     "project:github": "node scripts/import-github-project.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test",
+    "validate": "node scripts/validate-content.mjs"
   },
   "dependencies": {
     "react": "^19.2.6",
