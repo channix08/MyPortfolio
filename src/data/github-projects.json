@@ -1,0 +1,41 @@
+[
+  {
+    "id": "github-1094926541",
+    "title": "Study-Mate",
+    "type": "GitHub Project",
+    "year": 2025,
+    "status": "Active",
+    "summary": "A public GitHub repository for Study-Mate.",
+    "role": "Developer",
+    "impact": "",
+    "stack": [
+      "Dart",
+      "HTML",
+      "C++",
+      "CMake",
+      "Swift",
+      "C"
+    ],
+    "tone": "green",
+    "featured": true,
+    "image": "",
+    "links": {
+      "live": "",
+      "repo": "https://github.com/channix08/Study-Mate",
+      "caseStudy": ""
+    },
+    "overrides": {
+      "type": "Mobile App",
+      "summary": "An offline-first Flutter study companion for flashcards, timed quizzes, and organized notes.",
+      "role": "Flutter application development",
+      "impact": "3 learning workflows",
+      "stack": [
+        "Flutter",
+        "Dart",
+        "Provider",
+        "Hive",
+        "SharedPreferences"
+      ]
+    }
+  }
+]

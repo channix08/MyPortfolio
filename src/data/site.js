@@ -1,15 +1,17 @@
 export const profile = {
-  name: 'Jordan Diaz',
-  handle: 'jordan.dev',
+  name: 'Christian Lord Estorba',
+  handle: 'channix08',
   role: 'Frontend Engineer',
-  location: 'Boston / Remote',
-  email: 'hello@jordandiaz.dev',
+  location: 'Remote',
+  email: '',
+  github: 'https://github.com/channix08',
+  githubLabel: 'github.com/channix08',
   photo: '',
-  photoAlt: 'Portrait of Jordan Diaz',
+  photoAlt: 'Portrait of Christian Lord Estorba',
   photoPosition: '50% 35%',
   headline: 'I engineer interfaces that ship.',
   summary: 'I combine product thinking, frontend architecture, and a sharp design eye to build fast, accessible web experiences.',
-  availability: 'Available for select projects',
+  availability: 'Open to opportunities',
 }
 
 export const stackGroups = [
