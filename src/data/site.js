@@ -1,15 +1,18 @@
 export const profile = {
-  name: 'Jordan Diaz',
-  handle: 'jordan.dev',
+  name: 'Christian Lord Estorba',
+  handle: 'channix08',
   role: 'Frontend Engineer',
-  location: 'Boston / Remote',
-  email: 'hello@jordandiaz.dev',
-  photo: '',
-  photoAlt: 'Portrait of Jordan Diaz',
+  location: 'Remote',
+  email: '',
+  github: 'https://github.com/channix08',
+  githubLabel: 'github.com/channix08',
+  resumeUrl: '',
+  photo: '/profile.jpg',
+  photoAlt: 'Portrait of Christian Lord Estorba',
   photoPosition: '50% 35%',
   headline: 'I engineer interfaces that ship.',
   summary: 'I combine product thinking, frontend architecture, and a sharp design eye to build fast, accessible web experiences.',
-  availability: 'Available for select projects',
+  availability: 'Open to opportunities',
 }
 
 export const stackGroups = [
@@ -17,40 +20,28 @@ export const stackGroups = [
     key: 'frontend',
     label: 'Frontend',
     description: 'Product interfaces with strong foundations, clear state, and resilient responsive behavior.',
-    items: ['React', 'Next.js', 'TypeScript', 'Vite', 'CSS Architecture', 'TanStack Query'],
+    items: ['React', 'JavaScript', 'HTML', 'CSS', 'Vite', 'Responsive UI'],
   },
   {
-    key: 'systems',
-    label: 'UI Systems',
-    description: 'Reusable components and design tokens that keep teams moving without losing quality.',
-    items: ['Storybook', 'Design Tokens', 'Accessibility', 'Motion', 'Figma Handoff'],
+    key: 'mobile',
+    label: 'Mobile',
+    description: 'Offline-first Flutter experiences with practical state and local-data patterns.',
+    items: ['Flutter', 'Dart', 'Provider', 'Hive', 'SharedPreferences'],
   },
   {
-    key: 'platform',
-    label: 'Platform',
-    description: 'Practical tooling and integrations that connect polished frontends to real products.',
-    items: ['Node.js', 'GraphQL', 'PostgreSQL', 'Contentful', 'Git', 'CI / CD'],
+    key: 'workflow',
+    label: 'Workflow',
+    description: 'A maintainable development workflow focused on clarity, accessibility, and reliable delivery.',
+    items: ['Git', 'GitHub', 'Node.js', 'Accessibility', 'Performance', 'UI Engineering'],
   },
 ]
 
 export const experience = [
   {
-    period: '2024 - now',
-    role: 'Senior Frontend Engineer',
-    company: 'Beacon Studio',
-    detail: 'Leading product surfaces, launch systems, and frontend standards across client teams.',
-  },
-  {
-    period: '2022 - 2024',
-    role: 'Frontend Product Engineer',
-    company: 'LedgerFlow',
-    detail: 'Built customer-facing React experiences and a reusable interface system for faster launches.',
-  },
-  {
-    period: '2020 - 2022',
-    role: 'Independent Developer',
-    company: 'Freelance',
-    detail: 'Partnered with early-stage teams on product websites, web apps, and design systems.',
+    period: 'Current',
+    role: 'Frontend Engineer',
+    company: 'Independent projects',
+    detail: 'Building Study-Mate and this portfolio while sharpening accessible, responsive product interfaces.',
   },
 ]
 
@@ -63,8 +54,8 @@ export const capabilities = [
   },
   {
     index: '02',
-    title: 'Design engineering',
-    description: 'High-fidelity interfaces where typography, interaction, and implementation move together.',
+    title: 'Web + mobile interfaces',
+    description: 'Responsive React experiences and practical offline-first Flutter applications.',
     tag: 'craft',
   },
   {

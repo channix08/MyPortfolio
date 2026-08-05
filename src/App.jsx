@@ -1,17 +1,101 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { projects } from './data/projects'
+import { projects } from './data/allProjects'
 import { capabilities, experience, profile, stackGroups } from './data/site'
+import { applyTheme, getStoredTheme, storeTheme } from './utils/theme'
 
 const terminalTabs = ['profile.ts', 'stack.json', 'now.md']
+const projectTypes = ['All', ...new Set(projects.map((project) => project.type))]
+const projectIndex = new Map(projects.map((project, index) => [project.id, index]))
+
+function validHttpUrl(value) {
+  if (typeof value !== 'string') return ''
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+function validResourceUrl(value) {
+  if (typeof value !== 'string') return ''
+  const candidate = value.trim()
+  if (candidate.startsWith('/') && !candidate.startsWith('//')) return candidate
+  return validHttpUrl(candidate)
+}
+
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value)
+      return
+    } catch {
+      // Fall back for browsers that block the Clipboard API.
+    }
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  textarea.style.pointerEvents = 'none'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const copied = document.execCommand('copy')
+  textarea.remove()
+  if (!copied) throw new Error('Clipboard unavailable')
+}
+
+const emailValue = typeof profile.email === 'string' ? profile.email.trim() : ''
+const githubValue = validHttpUrl(profile.github)
+const githubLabel = typeof profile.githubLabel === 'string' ? profile.githubLabel.trim() : ''
+const hasEmail = Boolean(emailValue)
+const contactValue = hasEmail ? emailValue : githubValue
+const hasContact = Boolean(contactValue)
+const contactLabel = hasEmail ? emailValue : (githubLabel || githubValue)
+const contactHref = hasEmail ? `mailto:${emailValue}` : githubValue
+const contactIsExternal = Boolean(githubValue && !hasEmail)
+const copyDefaultLabel = hasContact ? (hasEmail ? 'copy email' : 'copy GitHub') : 'contact unavailable'
+const resumeValue = validResourceUrl(profile.resumeUrl)
+const resumeHref = resumeValue || (hasEmail ? `${contactHref}?subject=Resume%20request` : contactHref)
+const resumeIsExternal = Boolean(resumeValue && validHttpUrl(resumeValue)) || (!resumeValue && contactIsExternal)
+const currentYear = new Date().getFullYear()
+
+function getInitialProjectType() {
+  const requestedType = new URLSearchParams(window.location.search).get('type')
+  return projectTypes.includes(requestedType) ? requestedType : 'All'
+}
+
+function Headline({ text }) {
+  const words = text.trim().split(/\s+/)
+  const accent = words.pop()
+
+  return <>{words.join(' ')}{words.length ? ' ' : ''}<em>{accent}</em></>
+}
 
 function Arrow({ diagonal = false }) {
-  return <span aria-hidden="true">{diagonal ? 'NE' : '->'}</span>
+  return <span aria-hidden="true">{diagonal ? '↗' : '→'}</span>
 }
 
 function ProjectPreview({ project }) {
-  if (project.image) {
-    return <img className="project-image" src={project.image} alt={`${project.title} project preview`} />
+  const [failedImage, setFailedImage] = useState('')
+  const stackPreview = (project.stack.length ? project.stack.slice(0, 2) : ['GitHub'])
+    .map((item) => `'${item}'`)
+    .join(', ')
+
+  if (project.image && failedImage !== project.image) {
+    return (
+      <img
+        className="project-image"
+        src={project.image}
+        alt={`${project.title} project preview`}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailedImage(project.image)}
+      />
+    )
   }
 
   return (
@@ -31,7 +115,7 @@ function ProjectPreview({ project }) {
           <span><b>03</b><code><i>const</i> project = {'{'}</code></span>
           <span><b>04</b><code>  name: <em>'{project.title}'</em>,</code></span>
           <span><b>05</b><code>  status: <strong>'{project.status.toLowerCase()}'</strong>,</code></span>
-          <span><b>06</b><code>  stack: [<em>'{project.stack[0]}'</em>, <em>'{project.stack[1]}'</em>],</code></span>
+          <span><b>06</b><code>  stack: [<em>{stackPreview}</em>],</code></span>
           <span><b>07</b><code>{'}'}</code></span>
           <span><b>08</b><code /></span>
           <span><b>09</b><code><i>export default</i> build(project)</code></span>
@@ -43,10 +127,11 @@ function ProjectPreview({ project }) {
 }
 
 function ProjectCard({ project, index }) {
-  const hasLinks = Object.values(project.links).some(Boolean)
+  const hasLinks = Object.values(project.links ?? {}).some(Boolean)
+  const caseStudyIsExternal = Boolean(validHttpUrl(project.links.caseStudy))
 
   return (
-    <article className="project-card" data-reveal>
+    <article className="project-card">
       <div className="project-window">
         <div className="window-bar">
           <span className="window-dots"><i /><i /><i /></span>
@@ -55,7 +140,7 @@ function ProjectCard({ project, index }) {
         </div>
         <div className="project-visual">
           <ProjectPreview project={project} />
-          <span className="project-number">0{index + 1}</span>
+          <span className="project-number">{String(index + 1).padStart(2, '0')}</span>
         </div>
       </div>
 
@@ -75,9 +160,26 @@ function ProjectCard({ project, index }) {
             {project.stack.map((item) => <li key={item}>{item}</li>)}
           </ul>
           <div className="project-links">
-            {project.links.live && <a href={project.links.live} target="_blank" rel="noreferrer">Live <Arrow diagonal /></a>}
-            {project.links.repo && <a href={project.links.repo} target="_blank" rel="noreferrer">Code <Arrow diagonal /></a>}
-            {project.links.caseStudy && <a href={project.links.caseStudy}>Case study <Arrow /></a>}
+            {project.links.live && (
+              <a href={project.links.live} target="_blank" rel="noreferrer" aria-label={`View ${project.title} live (opens in a new tab)`}>
+                Live <Arrow diagonal />
+              </a>
+            )}
+            {project.links.repo && (
+              <a href={project.links.repo} target="_blank" rel="noreferrer" aria-label={`View ${project.title} source code (opens in a new tab)`}>
+                Code <Arrow diagonal />
+              </a>
+            )}
+            {project.links.caseStudy && (
+              <a
+                href={project.links.caseStudy}
+                target={caseStudyIsExternal ? '_blank' : undefined}
+                rel={caseStudyIsExternal ? 'noreferrer' : undefined}
+                aria-label={`Read the ${project.title} case study${caseStudyIsExternal ? ' (opens in a new tab)' : ''}`}
+              >
+                Case study <Arrow diagonal={caseStudyIsExternal} />
+              </a>
+            )}
             {!hasLinks && <span>Private build</span>}
           </div>
         </div>
@@ -86,7 +188,27 @@ function ProjectCard({ project, index }) {
   )
 }
 
-function TerminalPanel({ activeTab, setActiveTab, localTime }) {
+function TerminalPanel() {
+  const [activeTab, setActiveTab] = useState('profile.ts')
+  const [localTime, setLocalTime] = useState('')
+
+  useEffect(() => {
+    const updateTime = () => {
+      const value = new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZoneName: 'short',
+      }).format(new Date()).replace(/^24:/, '00:')
+
+      setLocalTime(value)
+    }
+
+    updateTime()
+    const timer = window.setInterval(updateTime, 30000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const handleTabKey = (event, index) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
@@ -125,8 +247,7 @@ function TerminalPanel({ activeTab, setActiveTab, localTime }) {
       </div>
 
       <div className="terminal-body">
-        {activeTab === 'profile.ts' && (
-          <div id="terminal-panel-0" role="tabpanel" aria-labelledby="terminal-tab-0" className="terminal-code">
+        <div id="terminal-panel-0" role="tabpanel" aria-labelledby="terminal-tab-0" className="terminal-code" hidden={activeTab !== 'profile.ts'}>
             <span><b>01</b><code><i>const</i> developer = {'{'}</code></span>
             <span><b>02</b><code>  name: <em>'{profile.name}'</em>,</code></span>
             <span><b>03</b><code>  role: <em>'{profile.role}'</em>,</code></span>
@@ -134,20 +255,20 @@ function TerminalPanel({ activeTab, setActiveTab, localTime }) {
             <span><b>05</b><code>  focus: [<em>'product UI'</em>, <em>'systems'</em>],</code></span>
             <span><b>06</b><code>  available: <strong>true</strong>,</code></span>
             <span><b>07</b><code>{'}'} <span className="caret" /></code></span>
-          </div>
-        )}
-        {activeTab === 'stack.json' && (
-          <div id="terminal-panel-1" role="tabpanel" aria-labelledby="terminal-tab-1" className="terminal-code">
+        </div>
+        <div id="terminal-panel-1" role="tabpanel" aria-labelledby="terminal-tab-1" className="terminal-code" hidden={activeTab !== 'stack.json'}>
             <span><b>01</b><code>{'{'}</code></span>
-            <span><b>02</b><code>  <em>"ui"</em>: [<strong>"React"</strong>, <strong>"TypeScript"</strong>],</code></span>
-            <span><b>03</b><code>  <em>"app"</em>: [<strong>"Next.js"</strong>, <strong>"Vite"</strong>],</code></span>
-            <span><b>04</b><code>  <em>"data"</em>: [<strong>"GraphQL"</strong>, <strong>"Postgres"</strong>],</code></span>
-            <span><b>05</b><code>  <em>"quality"</em>: [<strong>"a11y"</strong>, <strong>"performance"</strong>]</code></span>
-            <span><b>06</b><code>{'}'}</code></span>
-          </div>
-        )}
-        {activeTab === 'now.md' && (
-          <div id="terminal-panel-2" role="tabpanel" aria-labelledby="terminal-tab-2" className="now-panel">
+            {stackGroups.slice(0, 3).map((group, index) => (
+              <span key={group.key}>
+                <b>{String(index + 2).padStart(2, '0')}</b>
+                <code>  <em>"{group.key}"</em>: [{group.items.slice(0, 2).map((item, itemIndex) => (
+                  <span key={item}><strong>"{item}"</strong>{itemIndex < Math.min(group.items.length, 2) - 1 ? ', ' : ''}</span>
+                ))}],</code>
+              </span>
+            ))}
+            <span><b>05</b><code>{'}'}</code></span>
+        </div>
+        <div id="terminal-panel-2" role="tabpanel" aria-labelledby="terminal-tab-2" className="now-panel" hidden={activeTab !== 'now.md'}>
             <span className="markdown-heading"># now</span>
             <p>Building calm, high-signal interfaces for teams shipping complex products.</p>
             <ul>
@@ -155,8 +276,7 @@ function TerminalPanel({ activeTab, setActiveTab, localTime }) {
               <li><span>[x]</span> Accessible interaction patterns</li>
               <li><span>[ ]</span> Your next product</li>
             </ul>
-          </div>
-        )}
+        </div>
       </div>
       <div className="terminal-output">
         <span><i>$</i> npm run portfolio</span>
@@ -165,13 +285,14 @@ function TerminalPanel({ activeTab, setActiveTab, localTime }) {
       <div className="terminal-statusbar">
         <span>branch: main</span>
         <span>UTF-8</span>
-        <span>{localTime} EST</span>
+        <span>{localTime}</span>
       </div>
     </div>
   )
 }
 
 function ProfilePhotoCard() {
+  const [photoStatus, setPhotoStatus] = useState(profile.photo ? 'loading' : 'empty')
   const initials = profile.name
     .split(' ')
     .map((part) => part[0])
@@ -181,11 +302,16 @@ function ProfilePhotoCard() {
   return (
     <div className="profile-photo-card" data-reveal>
       <div className="profile-photo-frame">
-        {profile.photo ? (
+        {profile.photo && photoStatus !== 'error' ? (
           <img
             src={profile.photo}
             alt={profile.photoAlt}
+            width="320"
+            height="320"
+            decoding="async"
             style={{ objectPosition: profile.photoPosition }}
+            onLoad={() => setPhotoStatus('loaded')}
+            onError={() => setPhotoStatus('error')}
           />
         ) : (
           <span aria-label="Profile photo placeholder">{initials}</span>
@@ -199,7 +325,7 @@ function ProfilePhotoCard() {
         <span>{profile.role}</span>
       </div>
       <div className="profile-photo-meta">
-        <span><i /> {profile.photo ? 'image loaded' : 'image slot ready'}</span>
+        <span><i /> {{ loading: 'loading image', loaded: 'image loaded', error: 'initials fallback', empty: 'image slot ready' }[photoStatus]}</span>
         <small>1:1 / auto crop</small>
       </div>
     </div>
@@ -210,21 +336,19 @@ function App() {
   const commandDialogRef = useRef(null)
   const commandInputRef = useRef(null)
   const commandTriggerRef = useRef(null)
-  const [activeTerminalTab, setActiveTerminalTab] = useState('profile.ts')
+  const projectSearchRef = useRef(null)
   const [commandOpen, setCommandOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommand, setActiveCommand] = useState(0)
-  const [copyStatus, setCopyStatus] = useState('copy email')
-  const [theme, setTheme] = useState(() => localStorage.getItem('portfolio-theme') || 'system')
-  const [localTime, setLocalTime] = useState('')
-  const [activeType, setActiveType] = useState(() => new URLSearchParams(window.location.search).get('type') || 'All')
+  const [copyStatus, setCopyStatus] = useState(copyDefaultLabel)
+  const [theme, setTheme] = useState(getStoredTheme)
+  const [activeType, setActiveType] = useState(getInitialProjectType)
   const [projectSearch, setProjectSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '')
 
-  const projectTypes = useMemo(() => ['All', ...new Set(projects.map((project) => project.type))], [])
   const typeCounts = useMemo(() => Object.fromEntries(projectTypes.map((type) => [
     type,
     type === 'All' ? projects.length : projects.filter((project) => project.type === type).length,
-  ])), [projectTypes])
+  ])), [])
 
   const visibleProjects = useMemo(() => {
     const query = projectSearch.trim().toLowerCase()
@@ -235,18 +359,20 @@ function App() {
     })
   }, [activeType, projectSearch])
 
-  const copyEmail = useCallback(async () => {
+  const copyContact = useCallback(async () => {
+    if (!hasContact) return
     try {
-      await navigator.clipboard.writeText(profile.email)
-      setCopyStatus('email copied')
+      await copyText(contactValue)
+      setCopyStatus(hasEmail ? 'email copied' : 'GitHub copied')
     } catch {
-      setCopyStatus(profile.email)
+      setCopyStatus('copy failed')
     }
-    window.setTimeout(() => setCopyStatus('copy email'), 2200)
+    window.setTimeout(() => setCopyStatus(copyDefaultLabel), 2200)
   }, [])
 
   const navigateTo = useCallback((id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
   }, [])
 
   const cycleTheme = useCallback(() => {
@@ -265,18 +391,42 @@ function App() {
     commandDialogRef.current?.close()
   }, [])
 
-  const commands = [
-    { icon: '01', label: 'Go to selected work', detail: 'Navigation', action: () => navigateTo('work') },
-    { icon: '02', label: 'Explore the stack', detail: 'Navigation', action: () => navigateTo('stack') },
-    { icon: '03', label: 'View experience', detail: 'Navigation', action: () => navigateTo('experience') },
-    { icon: '@', label: 'Copy email address', detail: profile.email, action: copyEmail },
-    { icon: 'TH', label: `Cycle theme (current: ${theme})`, detail: 'Appearance', action: cycleTheme },
-    { icon: '->', label: 'Start a conversation', detail: 'Open email', action: () => { window.location.href = `mailto:${profile.email}` } },
-  ]
+  const commands = useMemo(() => {
+    const actions = [
+      { icon: '01', label: 'Go to selected work', detail: 'Navigation', action: () => navigateTo('work') },
+      { icon: '02', label: 'Explore the stack', detail: 'Navigation', action: () => navigateTo('stack') },
+      { icon: '03', label: 'View experience', detail: 'Navigation', action: () => navigateTo('experience') },
+    ]
 
-  const filteredCommands = commands.filter((command) => (
+    if (hasContact) {
+      actions.push({
+        icon: hasEmail ? '@' : 'GH',
+        label: hasEmail ? 'Copy email address' : 'Copy GitHub profile',
+        detail: contactLabel,
+        action: copyContact,
+      })
+    }
+
+    actions.push({ icon: 'TH', label: `Cycle theme (current: ${theme})`, detail: 'Appearance', action: cycleTheme })
+
+    if (hasContact) {
+      actions.push({
+        icon: '→',
+        label: hasEmail ? 'Start a conversation' : 'Open GitHub profile',
+        detail: hasEmail ? 'Open email' : contactLabel,
+        action: () => {
+          if (contactIsExternal) window.open(contactHref, '_blank', 'noopener,noreferrer')
+          else window.location.href = contactHref
+        },
+      })
+    }
+
+    return actions
+  }, [copyContact, cycleTheme, navigateTo, theme])
+
+  const filteredCommands = useMemo(() => commands.filter((command) => (
     `${command.label} ${command.detail}`.toLowerCase().includes(commandQuery.toLowerCase())
-  ))
+  )), [commandQuery, commands])
 
   const runCommand = (command) => {
     command.action()
@@ -309,26 +459,12 @@ function App() {
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const applyTheme = () => {
-      const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme
-      document.documentElement.dataset.theme = resolved
-      document.documentElement.style.colorScheme = resolved
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#080b10' : '#f4f7fb')
-    }
-    applyTheme()
-    localStorage.setItem('portfolio-theme', theme)
-    media.addEventListener('change', applyTheme)
-    return () => media.removeEventListener('change', applyTheme)
+    const updateTheme = () => applyTheme(theme, media.matches)
+    updateTheme()
+    storeTheme(theme)
+    media.addEventListener('change', updateTheme)
+    return () => media.removeEventListener('change', updateTheme)
   }, [theme])
-
-  useEffect(() => {
-    const updateTime = () => setLocalTime(new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York',
-    }).format(new Date()))
-    updateTime()
-    const timer = window.setInterval(updateTime, 30000)
-    return () => window.clearInterval(timer)
-  }, [])
 
   useEffect(() => {
     const handleShortcut = (event) => {
@@ -336,6 +472,15 @@ function App() {
         event.preventDefault()
         if (commandDialogRef.current?.open) closeCommandPalette()
         else openCommandPalette()
+      }
+
+      const target = event.target
+      const isEditing = target instanceof HTMLElement
+        && (target.matches('input, textarea, select') || target.isContentEditable)
+
+      if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey && !isEditing) {
+        event.preventDefault()
+        projectSearchRef.current?.focus()
       }
     }
     window.addEventListener('keydown', handleShortcut)
@@ -353,13 +498,14 @@ function App() {
     else params.set('type', activeType)
     if (projectSearch.trim()) params.set('q', projectSearch.trim())
     else params.delete('q')
-    const next = `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`
+    const query = params.toString()
+    const next = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
     window.history.replaceState({}, '', next)
   }, [activeType, projectSearch])
 
   useEffect(() => {
     const nodes = document.querySelectorAll('[data-reveal]')
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
       nodes.forEach((node) => node.classList.add('is-visible'))
       return undefined
     }
@@ -373,7 +519,7 @@ function App() {
     }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' })
     nodes.forEach((node) => observer.observe(node))
     return () => observer.disconnect()
-  }, [activeType, projectSearch])
+  }, [])
 
   return (
     <div className="site-shell">
@@ -397,20 +543,40 @@ function App() {
             <small>{theme}</small>
           </button>
           <button ref={commandTriggerRef} className="command-trigger" type="button" onClick={openCommandPalette}>
-            <span>command</span><kbd>Ctrl K</kbd>
+            <span>command</span><kbd>Ctrl / ⌘ K</kbd>
           </button>
         </div>
       </header>
 
-      <main id="main-content">
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        <a href="#work"><span>01</span>Work</a>
+        <a href="#stack"><span>02</span>Stack</a>
+        <a href="#experience"><span>03</span>Log</a>
+        <a href="#contact"><span>04</span>Contact</a>
+      </nav>
+
+      <main id="main-content" tabIndex="-1">
         <section id="top" className="hero page-width">
           <div className="hero-copy" data-reveal>
             <p className="terminal-label"><span>$</span> whoami</p>
-            <h1>I engineer interfaces that <em>ship.</em></h1>
+            <p className="hero-identity">{profile.name}<span>/</span>{profile.role}</p>
+            <h1><Headline text={profile.headline} /></h1>
             <p className="hero-summary">{profile.summary}</p>
             <div className="hero-actions">
               <a className="primary-action" href="#work">View projects <Arrow /></a>
-              <button className="secondary-action" type="button" onClick={copyEmail}><span>/</span> {copyStatus}</button>
+              {hasContact && (hasEmail ? (
+                <button className="secondary-action" type="button" onClick={copyContact}><span>/</span> {copyStatus}</button>
+              ) : (
+                <a
+                  className="secondary-action"
+                  href={contactHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open GitHub profile (opens in a new tab)"
+                >
+                  GitHub profile <Arrow diagonal />
+                </a>
+              ))}
             </div>
             <div className="hero-presence">
               <span><i /> {profile.availability}</span>
@@ -419,7 +585,7 @@ function App() {
           </div>
           <div className="hero-workspace">
             <ProfilePhotoCard />
-            <TerminalPanel activeTab={activeTerminalTab} setActiveTab={setActiveTerminalTab} localTime={localTime} />
+            <TerminalPanel />
           </div>
         </section>
 
@@ -442,15 +608,17 @@ function App() {
             <div className="project-search">
               <label htmlFor="project-search"><span>$</span> find ./projects</label>
               <input
+                ref={projectSearchRef}
                 id="project-search"
                 type="search"
                 value={projectSearch}
                 onChange={(event) => setProjectSearch(event.target.value)}
                 placeholder="Search by project or stack..."
+                maxLength="120"
               />
               <kbd>/</kbd>
             </div>
-            <div className="project-filters" aria-label="Filter projects by type">
+            <div className="project-filters" role="group" aria-label="Filter projects by type">
               {projectTypes.map((type) => (
                 <button
                   type="button"
@@ -470,7 +638,7 @@ function App() {
           {visibleProjects.length > 0 ? (
             <div id="project-grid" className="project-grid">
               {visibleProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} index={projects.indexOf(project)} />
+                <ProjectCard key={project.id} project={project} index={projectIndex.get(project.id) ?? 0} />
               ))}
             </div>
           ) : (
@@ -514,7 +682,17 @@ function App() {
             <p className="terminal-label"><span>$</span> git log --career</p>
             <h2>Engineering with product judgment.</h2>
             <p>I care about the quiet details: clean state, readable systems, and interactions that make a product feel obvious.</p>
-            <a href={`mailto:${profile.email}?subject=Resume request`}>Request full resume <Arrow /></a>
+            {(hasContact || resumeValue) && (
+              <a
+                href={resumeHref}
+                target={resumeIsExternal ? '_blank' : undefined}
+                rel={resumeIsExternal ? 'noreferrer' : undefined}
+                download={resumeValue.startsWith('/') ? true : undefined}
+                aria-label={resumeIsExternal ? `${resumeValue ? 'Download resume' : 'View GitHub profile'} (opens in a new tab)` : undefined}
+              >
+                {resumeValue ? 'Download resume' : hasEmail ? 'Request full resume' : 'View GitHub profile'} <Arrow diagonal={resumeIsExternal} />
+              </a>
+            )}
           </div>
           <div className="git-log" data-reveal>
             {experience.map((item, index) => (
@@ -532,16 +710,29 @@ function App() {
 
       <footer id="contact" className="site-footer">
         <div className="footer-panel page-width" data-reveal>
-          <div className="footer-command"><span>&gt;</span> available_for = <em>"select projects"</em><i /></div>
+          <div className="footer-command"><span>&gt;</span> available_for = <em>"{profile.availability.toLowerCase()}"</em><i /></div>
           <h2>Let&apos;s build something <em>useful.</em></h2>
           <p>Have a product, platform, or interface that deserves a stronger frontend?</p>
           <div className="footer-actions">
-            <a href={`mailto:${profile.email}`}>{profile.email} <Arrow diagonal /></a>
-            <button type="button" onClick={copyEmail}>{copyStatus}</button>
+            {hasContact ? (
+              <>
+                <a
+                  href={contactHref}
+                  target={contactIsExternal ? '_blank' : undefined}
+                  rel={contactIsExternal ? 'noreferrer' : undefined}
+                  aria-label={contactIsExternal ? `Open ${contactLabel} (opens in a new tab)` : undefined}
+                >
+                  <span>{contactLabel}</span> <Arrow diagonal />
+                </a>
+                <button type="button" onClick={copyContact}>{copyStatus}</button>
+              </>
+            ) : (
+              <p>Contact details coming soon.</p>
+            )}
           </div>
         </div>
         <div className="footer-meta page-width">
-          <span>(c) 2026 {profile.name}</span>
+          <span>© {currentYear} {profile.name}</span>
           <span>Built with React + intent</span>
           <a href="#top">Back to top [up]</a>
         </div>
@@ -573,38 +764,50 @@ function App() {
               }}
               onKeyDown={handleCommandKeys}
               aria-label="Search commands"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={commandOpen}
+              aria-controls="command-list"
+              aria-describedby="command-help"
+              aria-activedescendant={filteredCommands[activeCommand] ? `command-option-${activeCommand}` : undefined}
               placeholder="Type a command..."
               autoComplete="off"
             />
             <kbd>ESC</kbd>
+            <button className="command-close" type="button" onClick={closeCommandPalette} aria-label="Close command palette">×</button>
           </div>
           <div className="command-head">
             <h2 id="command-title">Command palette</h2>
             <span>{filteredCommands.length} actions</span>
           </div>
-          <div className="command-list" role="listbox" aria-label="Available commands">
+          <div id="command-list" className="command-list" role="listbox" aria-label="Available commands">
             {filteredCommands.map((command, index) => (
-              <button
-                type="button"
+              <div
+                id={`command-option-${index}`}
                 key={command.label}
                 role="option"
                 aria-selected={index === activeCommand}
-                className={index === activeCommand ? 'is-active' : ''}
+                className={`command-option${index === activeCommand ? ' is-active' : ''}`}
                 onMouseEnter={() => setActiveCommand(index)}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => runCommand(command)}
               >
                 <span className="command-icon">{command.icon}</span>
                 <span><strong>{command.label}</strong><small>{command.detail}</small></span>
                 <kbd>ENTER</kbd>
-              </button>
+              </div>
             ))}
             {!filteredCommands.length && <p className="no-commands">No command found. Try "work" or "theme".</p>}
           </div>
-          <div className="command-help"><span>[up/down] navigate</span><span>[enter] select</span><span>[esc] close</span></div>
+          <div id="command-help" className="command-help"><span>[up/down] navigate</span><span>[enter] select</span><span>[esc] close</span></div>
         </div>
       </dialog>
 
-      <div className="sr-status" aria-live="polite">{copyStatus === 'email copied' ? 'Email address copied to clipboard' : ''}</div>
+      <div className="sr-status" aria-live="polite">
+        {copyStatus.includes('copied')
+          ? `${hasEmail ? 'Email address' : 'GitHub profile'} copied to clipboard`
+          : copyStatus === 'copy failed' ? 'Copy failed. Open the contact link to copy it manually.' : ''}
+      </div>
     </div>
   )
 }

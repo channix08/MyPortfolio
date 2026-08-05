@@ -1,5 +1,8 @@
 /*
  * ADDING A PROJECT
+ * The objects below are hidden examples. Duplicate one, replace every value with
+ * your real project details, and set featured to true when it is ready to publish.
+ *
  * 1. Duplicate one object below.
  * 2. Update its content. The grid, search, filters, counts, and artwork update automatically.
  * 3. Optional: add an image to /public/projects and set image to "/projects/file.jpg".
@@ -18,7 +21,7 @@ export const projects = [
     impact: 'Demo requests +34%',
     stack: ['React', 'TypeScript', 'Contentful'],
     tone: 'cyan',
-    featured: true,
+    featured: false,
     image: '',
     links: { live: '', repo: '', caseStudy: '' },
   },
@@ -33,7 +36,7 @@ export const projects = [
     impact: 'Launch time cut 50%',
     stack: ['Next.js', 'MDX', 'Motion'],
     tone: 'green',
-    featured: true,
+    featured: false,
     image: '',
     links: { live: '', repo: '', caseStudy: '' },
   },
@@ -48,7 +51,7 @@ export const projects = [
     impact: 'Support questions -28%',
     stack: ['Vite', 'React', 'Storybook'],
     tone: 'violet',
-    featured: true,
+    featured: false,
     image: '',
     links: { live: '', repo: '', caseStudy: '' },
   },
@@ -63,7 +66,7 @@ export const projects = [
     impact: 'Onboarding 2x faster',
     stack: ['React', 'TanStack', 'Design Tokens'],
     tone: 'amber',
-    featured: true,
+    featured: false,
     image: '',
     links: { live: '', repo: '', caseStudy: '' },
   },

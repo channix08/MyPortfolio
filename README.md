@@ -1,45 +1,71 @@
-# Jordan Diaz — Portfolio
+# Christian Lord Estorba - Portfolio
 
-A responsive portfolio built with React and Vite.
+A modern, responsive developer portfolio built with React and Vite.
 
-## Add a project
-
-Open `src/data/projects.js`, duplicate one project object, and replace its content. The project explorer, search, filters, counts, and fallback artwork update automatically.
-
-- `title`, `type`, `year`, `status`, and `summary` control the visible project details.
-- `role` and optional `impact` add project proof.
-- `stack` accepts any number of technology labels.
-- `tone` selects a controlled preview color: `cyan`, `green`, `violet`, or `amber`.
-- `image` is optional. Add an image to `public/projects` and use a path such as `/projects/my-project.jpg`.
-- `links.live`, `links.repo`, and `links.caseStudy` are all optional and stay hidden when empty.
-
-Update the portfolio profile, technical stack, capabilities, and experience in `src/data/site.js`.
-
-## Add your profile picture
-
-1. Add your image to `public/profile.jpg`.
-2. Open `src/data/site.js` and set `photo` to `/profile.jpg`.
-3. Use `photoPosition` to adjust the crop, for example `50% 25%` to show more of the upper part of the photo.
-
-The hero shows a styled initials placeholder until a photo path is supplied.
+Requires Node.js `^20.19.0` or `>=22.12.0`.
 
 ## Run locally
 
 ```bash
+npm install
 npm run dev
 ```
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Before publishing, run the complete quality check:
 
-Currently, two official plugins are available:
+```bash
+npm run check
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This runs ESLint, the automated tests, content/link/asset validation, and the production build.
 
-## React Compiler
+## Import a public GitHub project
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Use one command with the repository's `OWNER/REPO` name:
 
-## Expanding the ESLint configuration
+```bash
+npm run project:github -- channix08/Study-Mate
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The importer reads the public GitHub repository and its languages, then adds or updates a normalized project in `src/data/github-projects.json`. Search, filters, counts, links, and fallback artwork update automatically.
+
+Preview the exact saved record without changing files:
+
+```bash
+npm run project:github -- channix08/Study-Mate --dry-run
+```
+
+Run the same import again whenever the repository metadata changes. Existing `overrides` are preserved in both preview and real updates. Public repositories work without a token; GitHub's normal unauthenticated API rate limit applies.
+
+To customize an imported card without losing your edits on the next import, add fields inside its `overrides` object. You can override `summary`, `type`, `role`, `impact`, `stack`, `tone`, `image`, `featured`, or individual `links`. Set `"featured": false` inside `overrides` to hide an imported repository without deleting it.
+
+## Add or customize a project manually
+
+Edit `src/data/projects.js` for hand-written case studies, or use the `overrides` object on an imported entry in `src/data/github-projects.json`.
+
+The file includes hidden examples. Replace an example with your own details and change `featured` to `true` only when it is ready to publish.
+
+- `title`, `type`, `year`, `status`, and `summary` control visible details.
+- `role` and optional `impact` add project proof.
+- `stack` accepts one or more technology labels.
+- `tone` supports `cyan`, `green`, `violet`, or `amber`.
+- `image` is optional. Put an image in `public/projects` and use a path such as `/projects/my-project.jpg`.
+- `links.live` and `links.repo` must use complete `https://...` or `http://...` URLs.
+- `links.caseStudy` can use a complete URL or an internal path such as `/case-studies/my-project`.
+- Empty links stay hidden. Unsafe or malformed link protocols are rejected by `npm run validate` and omitted at runtime.
+
+The app normalizes missing optional fields so an incomplete project cannot break the page.
+
+## Update your profile
+
+Edit `src/data/site.js` to change the profile, stack, capabilities, and experience.
+
+To add a profile picture:
+
+1. Add the image as `public/profile.jpg`.
+2. Set `photo` to `/profile.jpg` in `src/data/site.js`.
+3. Adjust `photoPosition`, such as `50% 25%`, to control the crop.
+
+Leave `photo` empty to keep the styled initials placeholder. Add an email when ready; until then, the interface uses the configured GitHub profile as the contact method.
+
+To add a downloadable resume, place it at `public/resume.pdf` and set `resumeUrl` to `/resume.pdf`. Leave it empty to keep the GitHub/contact fallback.
