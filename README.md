@@ -1,4 +1,4 @@
-# Jordan Diaz — Portfolio
+# Christian Lord V. Estorba - Portfolio
 
 A responsive portfolio built with React and Vite.
 
